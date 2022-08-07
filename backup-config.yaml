@@ -1,0 +1,37 @@
+---
+
+- name: Backup configuration of Cisco devices
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Accept ansible net hostname
+      cisco.ios.ios_facts:
+        gather_subset: all
+
+    - name: Get current date
+      local_action: command date +%Y-%b-%d
+      register: date
+
+    - name: Get current time
+      local_action: command date +%H:%M
+      register: time
+
+    - name: Get running-config and save it
+      cisco.ios.ios_config:
+        backup: yes
+        backup_options:
+          dir_path: /etc/demo/{{ date.stdout }}
+          filename: "{{ ansible_host }}.txt"
+      register: config_output
+
+    - name: remove non config lines - regexp
+      ansible.builtin.lineinfile:
+        path: "{{ config_output.backup_path }}"
+        line: "Building configuration..."
+        state: absent
+      delegate_to: localhost
+
+    - name: Tasks done
+      debug: 
+        msg: "All tasks has been done on {{ date.stdout }} at {{ time.stdout }}."
+
